@@ -41,9 +41,9 @@ def save_invalid_data(df):
     
     df = df.withColumn('record', to_json(struct(col("*"))))
     df = df.drop(*columns) \
-            .withColumn("rule", lit("rule")) \
+            .withColumn("rule", lit(event_valid_sql)) \
             .withColumn("reason", lit("reason")) \
-            .withColumn("error_type", lit("retryable")) \
+            .withColumn("status", lit("retryable")) \
             .withColumn("retry_attempt", lit(0)) \
             .withColumn("retry_attempt_limit", lit(3)) \
             .withColumn("created_at", current_timestamp())
@@ -70,6 +70,9 @@ valid_records.writeStream.format("delta")\
     .option("path",event_table_path)\
     .option("checkpointLocation", event_table_ckpt_path) \
     .toTable(event_table_name)
+
+# COMMAND ----------
+
 df = spark.sql(f"select * from {event_table_name}")
 display(df)
 

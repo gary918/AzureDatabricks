@@ -27,3 +27,8 @@ df.write.format("delta")\
 df = spark.sql(f"select * from {master_table_name}")
 display(df)
 
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC insert into default.fruits values("17","Pear","White",6.8)
