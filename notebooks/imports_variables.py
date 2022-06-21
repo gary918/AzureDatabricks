@@ -14,8 +14,8 @@ from pyspark.sql.functions import *
 master_source_path ="/FileStore/error_handling/fruits.csv"
 master_table_path = "/__data_storage__/error_handling/fruits"
 master_table_name = "default.fruits"
-master_temp_view = "fruits_view"
-master_sql = "select ID as id, shuiguo as fruit, yanse as color, jiage as price from fruits_view"
+master_data_tv = "fruits_view"
+master_transform_sql = f"select ID as id, shuiguo as fruit, yanse as color, jiage as price from {master_data_tv}"
 
 # COMMAND ----------
 
@@ -23,8 +23,12 @@ event_source_path = "/FileStore/error_handling/mock_events"
 event_table_path = "/__data_storage__/error_handling/fruit_events"
 event_table_ckpt_path = "/__data_storage__/error_handling/ckpt/fruit_events"
 event_table_name = "default.fruit_events"
-event_temp_view = "fruit_events_view"
-event_sql = ""
+event_data_tv = "fruit_events_view"
+event_data_schema = StructType([
+        StructField("id", IntegerType()),
+        StructField("amount", IntegerType()),
+        StructField("ts", TimestampType())
+    ])
 
 # COMMAND ----------
 
@@ -34,8 +38,9 @@ error_table_ckpt_path = "/__data_storage__/error_handling/ckpt/error_table"
 error_table_name = "default.error_table"
 valid_event_data_tv = "valid_fruit_events_view"
 invalid_event_data_tv = "invalid_fruit_events_view"
-event_valid_sql = f'select * from {event_temp_view} e where e.id in (select m.id from {master_table_name} as m)'
-event_invalid_sql = f'select * from {event_temp_view} e where e.id not in (select m.id from {master_table_name} as m)'
+event_valid_sql = f'select * from {event_data_tv} e where e.id in (select m.id from {master_table_name} as m)'
+event_invalid_sql = f'select * from {event_data_tv} e where e.id not in (select m.id from {master_table_name} as m)'
+event_transform_sql = f"select m.ID, m.Fruit, m.Price, e.amount, e.ts from {valid_event_data_tv} e left outer join {master_table_name} m ON e.id=m.ID"
 
 # COMMAND ----------
 

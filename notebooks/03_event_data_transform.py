@@ -3,16 +3,11 @@
 
 # COMMAND ----------
 
-schema = StructType([
-           StructField('id', IntegerType(), True),
-           StructField('amount', IntegerType(), True),
-           StructField('ts', TimestampType(), True)
-         ])
-
+# Load the event data
 df = spark.readStream\
         .format("csv") \
         .option("delimiter", ",")\
-        .schema(schema) \
+        .schema(event_data_schema) \
         .option("header","true")\
         .option("multiline", "true") \
         .option('badRecordsPath', bad_records_path)\
@@ -22,18 +17,14 @@ display(df)
 
 # COMMAND ----------
 
-df.createOrReplaceTempView(event_temp_view)
-
-def validate_records():
-    valid_records = spark.sql(f'select * from {event_temp_view} e where e.id in (select m.id from {master_table_name} as m)')
-    invalid_records = spark.sql(f'select * from {event_temp_view} e where e.id not in (select m.id from {master_table_name} as m)')
-    return valid_records, invalid_records
-
+# Validate the event data
+df.createOrReplaceTempView(event_data_tv)
 valid_records, invalid_records = validate_records()
 display(invalid_records)
 
 # COMMAND ----------
 
+# Save the invalid data into the delta table
 def save_invalid_data(df):
     columns = []
     for sf in df.schema.fields:
@@ -42,7 +33,7 @@ def save_invalid_data(df):
     df = df.withColumn('record', to_json(struct(col("*"))))
     df = df.drop(*columns) \
             .withColumn("rule", lit(event_valid_sql)) \
-            .withColumn("reason", lit("reason")) \
+            .withColumn("reason", lit("No relevant master data found.")) \
             .withColumn("status", lit("retryable")) \
             .withColumn("retry_attempt", lit(0)) \
             .withColumn("retry_attempt_limit", lit(3)) \
@@ -65,7 +56,15 @@ display(valid_records)
 
 # COMMAND ----------
 
-valid_records.writeStream.format("delta")\
+# Transform the valid records
+valid_records.createOrReplaceTempView(valid_event_data_tv)
+transformed_records = spark.sql(event_transform_sql)
+
+# COMMAND ----------
+
+# Save the transformed data into the delta table
+transformed_records.writeStream \
+    .format("delta")\
     .outputMode("append")\
     .option("path",event_table_path)\
     .option("checkpointLocation", event_table_ckpt_path) \
@@ -84,7 +83,7 @@ display(df)
 # COMMAND ----------
 
 # MAGIC %sh
-# MAGIC cat /dbfs/FileStore/mock_events/file_0.csv
+# MAGIC cat /dbfs/FileStore/error_handling/mock_events/file_0.csv
 
 # COMMAND ----------
 

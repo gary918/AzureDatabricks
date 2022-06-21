@@ -3,20 +3,16 @@
 
 # COMMAND ----------
 
+# Check if the error table exists
 if not DeltaTable.isDeltaTable(spark, error_table_path):
     raise Exception("Error table not found.")
     
 
 # COMMAND ----------
 
-schema = StructType([
-        StructField("id", IntegerType()),
-        StructField("amount", IntegerType()),
-        StructField("ts", TimestampType())
-    ])
-
+# Get event data column names and error table column names
 event_columns = []
-for sf in schema.fields:
+for sf in event_data_schema.fields:
     event_columns.append(sf.name)
 
 df_all = spark.read.format("delta").load(error_table_path)
@@ -32,14 +28,15 @@ if df_retryable.count()==0:
     print(f"{error_table_path}: no retryable record.")
     dbutils.notebook.exit("event retry")
 df_remain = df_all.subtract(df_retryable)
-df_retryable = df_retryable.withColumn("json_record",from_json(col("record"),schema)) \
+df_retryable = df_retryable.withColumn("json_record",from_json(col("record"),event_data_schema)) \
         .select("json_record.*","*")\
         .drop("json_record")
-df_retryable.createOrReplaceTempView(event_temp_view)
+df_retryable.createOrReplaceTempView(event_data_tv)
 df_retryable.show()
 
 # COMMAND ----------
 
+# Validate the records
 valid_records, invalid_records = validate_records()
 display(invalid_records)
 
@@ -58,7 +55,10 @@ display(valid_records)
 
 # COMMAND ----------
 
-valid_data.write.format("delta")\
+# Transform the valid records and save them into the delta table
+transformed_records = spark.sql(event_transform_sql)
+transformed_records.write\
+                .format("delta")\
                 .mode("append")\
                 .option("path",event_table_path)\
                 .saveAsTable(event_table_name)
@@ -76,12 +76,13 @@ invalid_records = invalid_records.withColumn("retry_attempt",col("retry_attempt"
                             .withColumn("rule",lit(event_valid_sql))\
                             .drop(*event_columns)
 
-# Overwrite the error table
+# Refresh the records in the error table
 df_remain = df_remain.union(valid_records).union(invalid_records)
 df_remain.show()
 
 # COMMAND ----------
 
+# Overwrite the error table
 df_remain.write.format("delta")\
             .mode("overwrite")\
             .option("path", error_table_path)\

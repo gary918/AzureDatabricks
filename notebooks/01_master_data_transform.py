@@ -3,20 +3,21 @@
 
 # COMMAND ----------
 
+# Load the master data from the CSV file
 df = spark.read.format("csv").option("header", True).load(master_source_path)
 display(df)
 
 # COMMAND ----------
 
-temp_view = "fruits_view"
-sql = "select ID as id, shuiguo as fruit, yanse as color, jiage as price from fruits_view"
-df.createOrReplaceTempView(master_temp_view)
-df = spark.sql(sql)
+# Transform the master data
+df.createOrReplaceTempView(master_data_tv)
+df = spark.sql(master_transform_sql)
 display(df)
 
 
 # COMMAND ----------
 
+# Save the transformed master data into the delta table
 df.write.format("delta")\
     .mode("append")\
     .option("path",master_table_path)\
@@ -31,4 +32,5 @@ display(df)
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC insert into default.fruits values("17","Pear","White",6.8)
+# MAGIC --Update the master data by using SQL
+# MAGIC insert into default.fruits values("17","Watermelon","White",6.8)

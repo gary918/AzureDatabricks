@@ -34,7 +34,7 @@ with open(file_location, 'w', newline='') as file:
 
 count += 1
 dbutils.fs.mv(f'file:{file_location}', f'dbfs:{file_location}')
-time.sleep(30)
+time.sleep(5)
 print(f'New CSV file created at dbfs:{file_location}. Contents:')
 
 with open(f'/dbfs{file_location}', 'r') as file:
