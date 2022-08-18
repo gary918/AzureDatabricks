@@ -6,6 +6,7 @@
   * job2 by using notebook2
   * job3 by using notebook3
 ## Install Apache Airflow
+* Prepare a python environment if needed
 * Open a terminal, execute ./airflow_install_run.sh
 * Run ```airflow webserver --port 8080```
 * Open a new terminal, run ```airflow scheduler```
