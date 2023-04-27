@@ -233,7 +233,7 @@ Create tbl_alarm_master table which is the source data to be contextualized, and
 %sql
 CREATE TABLE tbl_alarm_master (alarm_id INT, alarm_type STRING, alarm_desc STRING, valid_from TIMESTAMP, valid_till TIMESTAMP) 
 USING DELTA
-LOCATION '/mnt/honeywell/raw/tbl_alarm_master'
+LOCATION '/mnt/contoso/raw/tbl_alarm_master'
 TBLPROPERTIES (delta.enableChangeDataFeed = true)
 ```
 Insert sample data into this table.
@@ -251,7 +251,7 @@ Create table_commit_version so that we can record last commit version for each t
 %sql
 CREATE TABLE table_commit_version (table_name STRING, last_commit_version LONG, updated_at TIMESTAMP)
 USING DELTA
-LOCATION '/mnt/honeywell/table_commit_version'
+LOCATION '/mnt/contoso/table_commit_version'
 ```
 Insert one record into this table to set last_commit_version to 1.
 ```
